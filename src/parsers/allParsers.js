@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const crypto = require('crypto');
+const { extractText } = require('unpdf');
 
 /**
  * Parser 1: pdf-parse (Recommended - Simple and Reliable)
@@ -335,11 +336,53 @@ async function compareAllParsers(pdfPath) {
   };
 }
 
+/**
+ * Parser 5: unpdf (Modern alternative to pdf-parse)
+ */
+async function parseWithUnpdf(input) {
+  const startTime = Date.now();
+  
+  try {
+    let dataBuffer;
+    if (typeof input === 'string') {
+      dataBuffer = await fs.readFile(input);
+    } else {
+      dataBuffer = input;
+    }
+
+    const { totalPages, text } = await extractText(new Uint8Array(dataBuffer), {
+      mergePages: true,
+    });
+    
+    const parsingTime = Date.now() - startTime;
+
+    return {
+      success: true,
+      parser: 'unpdf',
+      text: text,
+      numPages: totalPages,
+      parsingTime,
+      metadata: {
+        library: 'unpdf',
+        pdfjs_version: '5.4.296',
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      parser: 'unpdf',
+      error: error.message,
+      parsingTime: Date.now() - startTime,
+    };
+  }
+}
+
 module.exports = {
   parseWithPdfParse,
   parseWithPdfJs,
   parseWithPdf2Json,
   parseWithPdfReader,
+  parseWithUnpdf,
   generateHash,
   compareAllParsers,
 };
